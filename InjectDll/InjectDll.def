@@ -1,0 +1,10 @@
+LIBRARY "InjectDll"
+
+EXPORTS
+	GetProcessPath @ 1
+	GetDllPath @ 2
+	DisplayErrorText @ 3
+	WcharToChar @ 100
+	CharToWchar @ 101
+	Panic @ 200
+	Prompt @ 201

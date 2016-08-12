@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InjectDll", "InjectDll\InjectDll.vcxproj", "{DF635F44-BB7C-41C6-970E-7246472C958A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InjectConsole", "InjectConsole\InjectConsole.vcxproj", "{CFD808DB-745A-4277-8EE6-2DD22617B30F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DF635F44-BB7C-41C6-970E-7246472C958A} = {DF635F44-BB7C-41C6-970E-7246472C958A}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Debug|x64.ActiveCfg = Debug|x64
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Debug|x64.Build.0 = Debug|x64
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Debug|x86.ActiveCfg = Debug|Win32
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Debug|x86.Build.0 = Debug|Win32
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Release|x64.ActiveCfg = Release|x64
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Release|x64.Build.0 = Release|x64
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Release|x86.ActiveCfg = Release|Win32
+		{DF635F44-BB7C-41C6-970E-7246472C958A}.Release|x86.Build.0 = Release|Win32
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Debug|x64.ActiveCfg = Debug|x64
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Debug|x64.Build.0 = Debug|x64
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Debug|x86.ActiveCfg = Debug|Win32
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Debug|x86.Build.0 = Debug|Win32
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Release|x64.ActiveCfg = Release|x64
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Release|x64.Build.0 = Release|x64
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Release|x86.ActiveCfg = Release|Win32
+		{CFD808DB-745A-4277-8EE6-2DD22617B30F}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
