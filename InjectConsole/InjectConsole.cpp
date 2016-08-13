@@ -2,6 +2,8 @@
 //
 
 #include "stdafx.h"
+#include <thread>
+#include "Pipe.h"
 
 int main()
 {
@@ -124,8 +126,10 @@ int main()
         return Panic("CreateRemoteThread");
     }
     printf("线程句柄: 0x%p\n", hThread);
+    //管道初始化
+    ReadingFromClient();
     //等待远程线程终止
-    ::WaitForSingleObject(hThread, 5000);
+    ::WaitForSingleObject(hThread, INFINITE);
     //返回远程线程的退出代码
     ::GetExitCodeThread(hThread, &hLibModule);
     printf("模块句柄: 0x%08X\n", hLibModule);

@@ -4,14 +4,18 @@
 #include "stdafx.h"
 #include "InjectDll.h"
 #include "HookApi.h"
+#include "IPC.h"
 
 INJECTDLL_API TCHAR g_DllName[] = _T("InjectDll.dll");
 INJECTDLL_API TCHAR g_ExecPath[] = _T("taskmgr");
 INJECTDLL_API TCHAR g_strWndClass[] = _T("TaskManagerWindow");
 INJECTDLL_API TCHAR g_strWndName[] = _T("任务管理器");
+INJECTDLL_API TCHAR g_strNamedPipe[] = _T("\\\\.\\pipe\\bajdcc_inject_IPC");
 INJECTDLL_API BOOL g_bInjected = FALSE;
 INJECTDLL_API HWND g_hWnd = nullptr;
+INJECTDLL_API HWND g_hWndTarget = nullptr;
 INJECTDLL_API HANDLE g_hProcess;
+INJECTDLL_API DWORD g_dwBufSize = 1024;
 
 INJECTDLL_API void GetProcessPath(DWORD dwProcessID, void *buffer)
 {
@@ -99,10 +103,50 @@ INJECTDLL_API wchar_t* CharToWchar(const char* c)
 
 INJECTDLL_API HRESULT Panic(LPSTR message)
 {
-    printf("[%s] ", message);
-    auto dwError = DisplayErrorText();
-    system("pause");
-    return dwError;
+    HMODULE hModule = nullptr;
+    LPSTR MessageBuffer;
+    auto dwLastError = GetLastError();
+
+    DWORD dwFormatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_IGNORE_INSERTS |
+        FORMAT_MESSAGE_FROM_SYSTEM;
+
+    if ((FormatMessageA(
+        dwFormatFlags,
+        hModule,
+        dwLastError,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        LPSTR(&MessageBuffer),
+        0,
+        nullptr
+        )))
+    {
+        if (g_bInjected)
+        {
+            MessageBoxA(g_hWnd, MessageBuffer, message, MB_OK);
+        }
+        else
+        {
+            printf("[%s] ", message);
+            auto dwError = DisplayErrorText();
+            system("pause");
+        }
+        LocalFree(MessageBuffer);
+    }
+    else
+    {
+        if (g_bInjected)
+        {
+            MessageBoxA(g_hWnd, message, "Panic", MB_OK);
+        }
+        else
+        {
+            printf("[%s]\n", message);
+            system("pause");
+        }
+    }
+    
+    return dwLastError;
 }
 
 INJECTDLL_API HRESULT Prompt()
@@ -137,6 +181,11 @@ int WINAPI MyMessageBoxW(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uTyp
     return nRet;
 }
 
+void GetTargetWindow(void)
+{
+    
+}
+
 void Attach(void)
 {
     g_hWnd = ::FindWindow(g_strWndClass, g_strWndName);
@@ -146,15 +195,18 @@ void Attach(void)
     if (dwPId != ::GetCurrentProcessId())
         return;
     g_bInjected = true;
+    StartIPC();
     char text[100];
     GetWindowTextA(g_hWnd, text, sizeof(text));
     std::stringstream ss;
     ss << text << " - injected by bajdcc";
     SetWindowTextA(g_hWnd, ss.str().c_str());
+    Print("Inject success!");
     g_hProcess = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());;
     assert(g_hProcess);
+    Print("Hook API: User32!MessageBoxW");
     g_apiMsgBox = CHookApi::Create("User32", "MessageBoxW", FARPROC(MyMessageBoxW));
-    MessageBoxW(g_hWnd, L"Test", L"Test", MB_OK);
+    GetTargetWindow();
 }
 
 void Detach(void)
@@ -163,5 +215,7 @@ void Detach(void)
         return;
     if (g_hProcess)
         ::CloseHandle(g_hProcess);
+    Print("Detach!");
     CHookApi::Clean();
+    StopIPC();
 }

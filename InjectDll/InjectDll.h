@@ -23,9 +23,12 @@ INJECTDLL_API extern TCHAR g_DllName[];
 INJECTDLL_API extern TCHAR g_ExecPath[];
 INJECTDLL_API extern TCHAR g_strWndClass[];
 INJECTDLL_API extern TCHAR g_strWndName[];
+INJECTDLL_API extern TCHAR g_strNamedPipe[];
 INJECTDLL_API extern BOOL g_bInjected;
 INJECTDLL_API extern HWND g_hWnd;
+INJECTDLL_API extern HWND g_hWndTarget;
 INJECTDLL_API extern HANDLE g_hProcess;
+INJECTDLL_API extern DWORD g_dwBufSize;
 
 void Attach(void);
 void Detach(void);

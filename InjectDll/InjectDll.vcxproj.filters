@@ -30,6 +30,9 @@
     <ClInclude Include="HookApi.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="IPC.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -42,6 +45,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="HookApi.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="IPC.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
