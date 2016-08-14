@@ -7,4 +7,5 @@ EXPORTS
 	WcharToChar @ 100
 	CharToWchar @ 101
 	Panic @ 200
-	Prompt @ 201
+	PanicWithPipe @ 201
+	Prompt @ 205

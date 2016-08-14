@@ -16,31 +16,41 @@ HRESULT ReadingFromClient()
         return Panic("CreateNamedPipe");
     }
 
+    g_bPipe = TRUE;
     printf("管道句柄: 0x%p\n", hPipe);
 
-    //等待客户端
-    if (!ConnectNamedPipe(hPipe, nullptr))
+    while (g_bPipe)
     {
-        CloseHandle(hPipe);
-        return Panic("ConnectNamedPipe");
+        printf("[管道] 等待连接...\n");
+
+        //等待客户端
+        if (!ConnectNamedPipe(hPipe, nullptr))
+        {
+            CloseHandle(hPipe);
+            return Panic("ConnectNamedPipe");
+        }
+
+        printf("[管道] 管道连接成功!\n");
+
+        //读取管道中的数据
+        DWORD nReadNum;
+        auto hHeap = GetProcessHeap();
+        auto szReadBuf = static_cast<char*>(HeapAlloc(hHeap, 0, (g_dwBufSize + 1)*sizeof(char)));
+        while (ReadFile(hPipe, szReadBuf, g_dwBufSize, &nReadNum, nullptr))
+        {
+            if (nReadNum == 7 && strncmp(szReadBuf, "Detach!", 7) == 0)
+                g_bPipe = FALSE;
+            szReadBuf[nReadNum] = '\0';
+            printf("[管道] >> %s\n", szReadBuf);
+        }
+        HeapFree(hHeap, 0, szReadBuf);
+        printf("[管道] 关闭连接\n");
+
+        FlushFileBuffers(hPipe);
+        DisconnectNamedPipe(hPipe);
     }
-
-    printf("管道连接成功!\n");
-
-    //读取管道中的数据
-    DWORD nReadNum;
-    auto hHeap = GetProcessHeap();
-    auto szReadBuf = static_cast<char*>(HeapAlloc(hHeap, 0, (g_dwBufSize + 1)*sizeof(char)));
-    while (ReadFile(hPipe, szReadBuf, g_dwBufSize, &nReadNum, nullptr))
-    {
-        szReadBuf[nReadNum] = '\0';
-        printf("[管道] %s\n", szReadBuf);
-    }
-    HeapFree(hHeap, 0, szReadBuf);
-    printf("关闭管道\n");
-
-    FlushFileBuffers(hPipe);
-    DisconnectNamedPipe(hPipe);
+    
+    printf("[管道] 关闭管道\n");
     CloseHandle(hPipe);
 
     return S_OK;

@@ -5,6 +5,7 @@
 #include "InjectDll.h"
 #include "HookApi.h"
 #include "IPC.h"
+#include <thread>
 
 INJECTDLL_API TCHAR g_DllName[] = _T("InjectDll.dll");
 INJECTDLL_API TCHAR g_ExecPath[] = _T("taskmgr");
@@ -16,6 +17,10 @@ INJECTDLL_API HWND g_hWnd = nullptr;
 INJECTDLL_API HWND g_hWndTarget = nullptr;
 INJECTDLL_API HANDLE g_hProcess;
 INJECTDLL_API DWORD g_dwBufSize = 1024;
+INJECTDLL_API BOOL g_bSpying = FALSE;
+INJECTDLL_API HINSTANCE g_hInstance = nullptr;
+INJECTDLL_API HHOOK g_hook = nullptr;
+INJECTDLL_API BOOL g_bPipe = FALSE;
 
 INJECTDLL_API void GetProcessPath(DWORD dwProcessID, void *buffer)
 {
@@ -149,6 +154,44 @@ INJECTDLL_API HRESULT Panic(LPSTR message)
     return dwLastError;
 }
 
+INJECTDLL_API HRESULT PanicWithPipe(LPSTR message)
+{
+    HMODULE hModule = nullptr;
+    LPSTR MessageBuffer;
+    auto dwLastError = GetLastError();
+
+    DWORD dwFormatFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_IGNORE_INSERTS |
+        FORMAT_MESSAGE_FROM_SYSTEM;
+
+    if ((FormatMessageA(
+        dwFormatFlags,
+        hModule,
+        dwLastError,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        LPSTR(&MessageBuffer),
+        0,
+        nullptr
+        )))
+    {
+        if (g_bInjected)
+        {
+            Print(message);
+            Print(MessageBuffer);
+        }
+        LocalFree(MessageBuffer);
+    }
+    else
+    {
+        if (g_bInjected)
+        {
+            Print(message);
+        }
+    }
+
+    return dwLastError;
+}
+
 INJECTDLL_API HRESULT Prompt()
 {
     HANDLE hToken;
@@ -181,11 +224,6 @@ int WINAPI MyMessageBoxW(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uTyp
     return nRet;
 }
 
-void GetTargetWindow(void)
-{
-    
-}
-
 void Attach(void)
 {
     g_hWnd = ::FindWindow(g_strWndClass, g_strWndName);
@@ -204,9 +242,10 @@ void Attach(void)
     Print("Inject success!");
     g_hProcess = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());;
     assert(g_hProcess);
-    Print("Hook API: User32!MessageBoxW");
-    g_apiMsgBox = CHookApi::Create("User32", "MessageBoxW", FARPROC(MyMessageBoxW));
-    GetTargetWindow();
+    //Print("Hook API: User32!MessageBoxW");
+    //g_apiMsgBox = CHookApi::Create("User32", "MessageBoxW", FARPROC(MyMessageBoxW));
+    StartSpy();
+    StopIPC();
 }
 
 void Detach(void)
@@ -215,7 +254,9 @@ void Detach(void)
         return;
     if (g_hProcess)
         ::CloseHandle(g_hProcess);
-    Print("Detach!");
+    StartIPC(FALSE);
     CHookApi::Clean();
-    StopIPC();
+    StopSpy();
+    Print("Detach!");
+    StopIPC(FALSE);
 }

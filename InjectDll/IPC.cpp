@@ -1,9 +1,10 @@
 #include "stdafx.h"
-#include <thread>
 #include "InjectDll.h"
 #include "IPC.h"
+#include <mutex>
 
 HANDLE hPipe;
+std::mutex mtx;
 
 void Print(LPCSTR pstrMessage)
 {
@@ -31,22 +32,24 @@ HRESULT InitIPC()
         return Panic("CreateFile");
     }
 
-    Print("This is a Test Message!");
-
     return S_OK;
 }
 
-HRESULT StartIPC()
+HRESULT StartIPC(BOOL bLock)
 {
+    if (bLock)
+        mtx.lock();
     return InitIPC();
 }
 
-HRESULT StopIPC()
+HRESULT StopIPC(BOOL bLock)
 {
     if (hPipe)
     {
         CloseHandle(hPipe);
         hPipe = nullptr;
     }
+    if (bLock)
+        mtx.unlock();
     return S_OK;
 }

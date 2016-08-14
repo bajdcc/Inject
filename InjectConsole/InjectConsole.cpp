@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include <thread>
 #include "Pipe.h"
 
 int main()
@@ -44,6 +43,8 @@ int main()
     typedef HWND(FAR WINAPI *pGetConsoleWindow)();
     //控制台窗口句柄
     auto hwConsoleWindow = pGetConsoleWindow(fpcGetConsoleWindow)();
+    printf("(FARPROC) GetConsoleWindow: 0x%p\n", fpcGetConsoleWindow);
+
     char lpstrConsoleTitle[MAX_PATH];
 
     ::SetConsoleTitleA("Inject Test");
@@ -71,7 +72,7 @@ int main()
         hWnd = ::FindWindow(g_strWndClass, g_strWndName);
         ::Sleep(1000);
     }
-
+    
     printf("窗口句柄: 0x%p\n", hWnd);
 
     HANDLE hRemoteProcess;
@@ -93,6 +94,8 @@ int main()
         ::Sleep(1000);
     }
     printf("打开进程: 0x%p\n", hRemoteProcess);
+
+    Sleep(3000);
 
     //注入DLL路径
     auto szLibPathA = std::make_unique<char*>(WcharToChar(szLibPath));
@@ -123,7 +126,7 @@ int main()
         LPTHREAD_START_ROUTINE(fpcLoadLibrary), pLibRemoteSrc, NULL, nullptr);
     if (!hThread)
     {
-        return Panic("CreateRemoteThread");
+        return Panic("CreateRemoteThread fpcLoadLibrary");
     }
     printf("线程句柄: 0x%p\n", hThread);
     //管道初始化
@@ -137,8 +140,6 @@ int main()
     ::CloseHandle(hThread);
     ::VirtualFreeEx(hRemoteProcess, pLibRemoteSrc, MAX_PATH, MEM_RELEASE);
     hThread = nullptr;
-
-    system("pause");
 
     //清理
     printf("关闭窗口...\n");

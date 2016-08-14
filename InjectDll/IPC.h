@@ -1,5 +1,5 @@
 #pragma once
 
 void Print(LPCSTR pstrMessage);
-HRESULT StartIPC();
-HRESULT StopIPC();
+HRESULT StartIPC(BOOL bLock = TRUE);
+HRESULT StopIPC(BOOL bLock = TRUE);

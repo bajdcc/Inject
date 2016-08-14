@@ -22,3 +22,8 @@
 #pragma comment(lib,"psapi.lib")
 #include <Pathcch.h>
 #pragma comment(lib,"Pathcch.lib")
+#include "SDL/include/SDL.h"
+#include "SDL/include/SDL_ttf.h"
+#pragma comment(lib,"SDL/lib/x86/SDL2.lib")
+#pragma comment(lib,"SDL/lib/x86/SDL2main.lib")
+#pragma comment(lib,"SDL/lib/x86/SDL2_ttf.lib")
