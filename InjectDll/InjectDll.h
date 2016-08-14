@@ -34,6 +34,7 @@ INJECTDLL_API extern BOOL g_bSpying;
 INJECTDLL_API extern HINSTANCE g_hInstance;
 INJECTDLL_API extern HHOOK g_hook;
 INJECTDLL_API extern BOOL g_bPipe;
+INJECTDLL_API extern LPSTR g_strImagePathFormat;
 
 void Attach(void);
 void Detach(void);

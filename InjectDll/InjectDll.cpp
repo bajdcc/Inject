@@ -21,6 +21,7 @@ INJECTDLL_API BOOL g_bSpying = FALSE;
 INJECTDLL_API HINSTANCE g_hInstance = nullptr;
 INJECTDLL_API HHOOK g_hook = nullptr;
 INJECTDLL_API BOOL g_bPipe = FALSE;
+INJECTDLL_API LPSTR g_strImagePathFormat = "B:\\BadApple\\BadApple%04d.jpg";
 
 INJECTDLL_API void GetProcessPath(DWORD dwProcessID, void *buffer)
 {

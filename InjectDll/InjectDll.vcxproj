@@ -222,6 +222,7 @@
     <ClInclude Include="SDL\include\SDL_types.h" />
     <ClInclude Include="SDL\include\SDL_version.h" />
     <ClInclude Include="SDL\include\SDL_video.h" />
+    <ClInclude Include="stb_image.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -244,6 +245,9 @@
     <ClCompile Include="InjectDll.cpp" />
     <ClCompile Include="IPC.cpp" />
     <ClCompile Include="Spy.cpp" />
+    <ClCompile Include="stb_image.cpp">
+      <DeploymentContent>false</DeploymentContent>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -1,19 +1,37 @@
 #include "stdafx.h"
 #include "InjectDll.h"
 #include "IPC.h"
-#include <locale.h>
-#include <string.h>
+#include "stb_image.h"
 
 #define RECT_WIDTH(rect) ((rect.right) - (rect.left))
 #define RECT_HEIGHT(rect) ((rect.bottom) - (rect.top))
 #define RECT_SIZE(rect) ((RECT_WIDTH(rect)) * (RECT_HEIGHT(rect)))
+
+#define DISPLAY_R 17
+#define DISPLAY_G 125
+#define DISPLAY_B 187
+
+#define BG_R 255
+#define BG_G 255
+#define BG_B 255
+
+#define LINE_R 217
+#define LINE_G 234
+#define LINE_B 244
+
+#define EDGE_R 17
+#define EDGE_G 125
+#define EDGE_B 189
 
 BOOL g_bHooking = FALSE;
 HHOOK g_hHook = nullptr;
 HWND g_prevHwnd = nullptr;
 HWND g_savedHwnd = nullptr;
 UINT_PTR uTimer;
+UINT_PTR uHook;
+UINT_PTR uSDL;
 WNDPROC oldProc;
+BOOL bUpdate;
 
 SDL_Window * sdlWindow = nullptr;
 SDL_Renderer* sdlRenderer = nullptr;
@@ -135,25 +153,163 @@ void SpyExecScanning(POINT &pt)
 
 int nSDLTime;
 
+void ProcessingImage(stbi_uc* data, int width, int height, int comp, int pitch)
+{
+    int i, j;
+    BYTE c, prev;
+    //二值化
+    for (j = 0; j < height; j++)
+    {
+        for (i = 0; i < width; i++)
+        {
+            //auto B = data[j * pitch + i * comp];
+            //auto G = data[j * pitch + i * comp + 1];
+            //auto R = data[j * pitch + i * comp + 2];
+            auto Gray = 0.212671f * data[j * pitch + i * comp + 2] +
+                0.715160f * data[j * pitch + i * comp + 1] +
+                0.072169f * data[j * pitch + i * comp];
+            if (Gray < 128.0f)
+            {
+                data[j * pitch + i * comp] = 0;
+                data[j * pitch + i * comp + 1] = 0;
+                data[j * pitch + i * comp + 2] = 0;
+            }
+            else
+            {
+                data[j * pitch + i * comp] = 255;
+                data[j * pitch + i * comp + 1] = 255;
+                data[j * pitch + i * comp + 2] = 255;
+            }
+        }
+    }
+    //边缘检测
+    prev = 0;
+    for (j = 0; j < height; j++)
+    {
+        for (i = 0; i < width; i++)
+        {
+            c = data[j * pitch + i * comp];
+            if (c != prev)
+            {
+                data[j * pitch + i * comp] = DISPLAY_B;
+                data[j * pitch + i * comp + 1] = DISPLAY_G;
+                data[j * pitch + i * comp + 2] = DISPLAY_R;
+            }
+            prev = c;
+        }
+    }
+    //边缘检测
+    prev = 0;
+    for (i = 0; i < width; i++)
+    {
+        for (j = 0; j < height; j++)
+        {
+            c = data[j * pitch + i * comp];
+            if (c != prev)
+            {
+                data[j * pitch + i * comp] = DISPLAY_B;
+                data[j * pitch + i * comp + 1] = DISPLAY_G;
+                data[j * pitch + i * comp + 2] = DISPLAY_R;
+            }
+            prev = c;
+        }
+    }
+    //背景
+    for (i = 0; i < width; i++)
+    {
+        for (j = 0; j < height; j++)
+        {
+            c = data[j * pitch + i * comp];
+            if (c == DISPLAY_B)
+                continue;
+            if ((j % (height / 10) == 0) && j != 0)//横线
+            {
+                data[j * pitch + i * comp] = LINE_B;
+                data[j * pitch + i * comp + 1] = LINE_G;
+                data[j * pitch + i * comp + 2] = LINE_R;
+            }
+            else if ((i % (width / 5) == (((6574 - nSDLTime) / 30 * (width / 20))) % (width / 5)) && i != 0)//竖线
+            {
+                data[j * pitch + i * comp] = LINE_B;
+                data[j * pitch + i * comp + 1] = LINE_G;
+                data[j * pitch + i * comp + 2] = LINE_R;
+            }
+            else if (c < 128)
+            {
+                data[j * pitch + i * comp] = BG_B;
+                data[j * pitch + i * comp + 1] = BG_G;
+                data[j * pitch + i * comp + 2] = BG_R;
+            }
+        }
+    }
+    //边框
+    for (i = 0; i < width; i++)
+    {
+        for (j = 0; j < height; j++)
+        {
+            if ((i == 0 || i == width - 1) || (j == 0 || j == height - 1))
+            {
+                data[j * pitch + i * comp] = EDGE_B;
+                data[j * pitch + i * comp + 1] = EDGE_G;
+                data[j * pitch + i * comp + 2] = EDGE_R;
+            }
+        }
+    }
+}
+
 VOID CALLBACK SDLProc(HWND, UINT, UINT_PTR, DWORD)
 {
-    nSDLTime++;
+    static char filename[100];
 
-    if (nSDLTime > 10)
+    if (bUpdate)
+        nSDLTime++;
+    else
+        return;
+
+    sprintf_s(filename, g_strImagePathFormat, nSDLTime);
+    int x, y, comp;
+    auto data = stbi_load(filename, &x, &y, &comp, 0);
+    if (!data)
+        return;
+
+    ProcessingImage(data, x, y, comp, x * comp);
+
+    auto image = SDL_CreateRGBSurfaceFrom(data, x, y, comp << 3, x * comp, 0, 0, 0, 0);
+    if (!image)
+    {
+        SetWindowTextA(g_hWnd, SDL_GetError());
+        return;
+    }
+
+    auto texture = SDL_CreateTextureFromSurface(sdlRenderer, image);
+
+    SDL_RenderClear(sdlRenderer);
+    SDL_RenderCopy(sdlRenderer, texture, nullptr, nullptr);
+    SDL_RenderPresent(sdlRenderer);
+
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(image);
+    stbi_image_free(data);
+
+    if (nSDLTime > 6574)
     {
         SDL_DestroyWindow(sdlWindow);
         SDL_DestroyRenderer(sdlRenderer);
         sdlWindow = nullptr;
         sdlRenderer = nullptr;
         SDL_Quit();
-        KillTimer(g_hWnd, uTimer);
+        if (uSDL)
+            KillTimer(g_hWnd, uSDL);
     }
 }
 
 LRESULT CALLBACK PaintProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (msg == WM_PAINT)
-        return FALSE;
+        return TRUE;
+
+    if (msg == WM_LBUTTONUP)
+        bUpdate = !bUpdate;
 
     SDL_Event event;
     SDL_PollEvent(&event);
@@ -183,7 +339,8 @@ void InitSDL(HWND hWnd)
     }
     Print("Create SDL Surface... OK");
 
-    sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, 0);
+    sdlRenderer = SDL_CreateRenderer(sdlWindow, -1,
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!sdlRenderer)
     {
         Print("Create SDL Renderer... FAILED");
@@ -207,19 +364,24 @@ void InitSDL(HWND hWnd)
     }
     Print("Create SDL TTF... OK");
 
-    SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(sdlRenderer, 255, 255, 255, 255);
     SDL_RenderClear(sdlRenderer);
     SDL_RenderPresent(sdlRenderer);
 
-    auto font = TTF_OpenFont("C:\\windows\\fonts\\msyh.ttf", 20);
+    auto font = TTF_OpenFont("C:\\windows\\fonts\\msyh.ttf", 32);
     assert(font);
-    SDL_Color color = { 255, 255, 255 };
+    SDL_Color color = { 17, 152, 187 };
 
-    auto surface = TTF_RenderText_Blended(font, "Hello World!", color);
+    auto surface = TTF_RenderUNICODE_Blended(font, PUINT16(L"你好！准备开始！"), color);
     auto texture = SDL_CreateTextureFromSurface(sdlRenderer, surface);
 
+    SDL_Rect rt;
+    rt.x = 0;
+    rt.y = 0;
+    SDL_QueryTexture(texture, nullptr, nullptr, &rt.w, &rt.h);
+
     SDL_RenderClear(sdlRenderer);
-    SDL_RenderCopy(sdlRenderer, texture, nullptr, nullptr);
+    SDL_RenderCopy(sdlRenderer, texture, &rt, &rt);
     SDL_RenderPresent(sdlRenderer);
 
     SDL_DestroyTexture(texture);
@@ -227,7 +389,8 @@ void InitSDL(HWND hWnd)
     TTF_CloseFont(font);
 
     nSDLTime = 0;
-    uTimer = SetTimer(g_hWnd, WM_USER + 445, 1000, SDLProc);
+    bUpdate = TRUE;
+    uSDL = SetTimer(g_hWnd, WM_USER + 402, 33, SDLProc);
 }
 
 VOID CALLBACK HookProc(HWND, UINT, UINT_PTR, DWORD)
@@ -238,10 +401,10 @@ VOID CALLBACK HookProc(HWND, UINT, UINT_PTR, DWORD)
     Print(lpszMsg);
     InitSDL(g_prevHwnd);
     StopIPC();
-    if (uTimer)
+    if (uHook)
     {
-        KillTimer(g_hWnd, uTimer);
-        uTimer = NULL;
+        KillTimer(g_hWnd, uHook);
+        uHook = NULL;
     }
 }
 
@@ -271,7 +434,7 @@ LRESULT CALLBACK MsgHookProc(int nCode, WPARAM wParam, LPARAM lParam)
                 pt = lpMsg->pt;
                 g_prevHwnd = SpyFindSmallestWindow(pt); //找到当前位置的最小窗口
                 g_bHooking = FALSE;
-                uTimer = SetTimer(g_hWnd, WM_USER + 445, 1000, TIMERPROC(HookProc));
+                uHook = SetTimer(g_hWnd, WM_USER + 401, 1000, TIMERPROC(HookProc));
             }
             break;
         default:
@@ -312,7 +475,7 @@ void StartSpy()
 {
     if (!g_hWnd)
         return;
-    uTimer = SetTimer(g_hWnd, WM_USER + 444, 1000, TIMERPROC(TimerProc));
+    uTimer = SetTimer(g_hWnd, WM_USER + 400, 1000, TIMERPROC(TimerProc));
 }
 
 void StopSpy()
