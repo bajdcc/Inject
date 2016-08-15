@@ -23,6 +23,14 @@
 #define EDGE_G 125
 #define EDGE_B 189
 
+#define FILL_R 241
+#define FILL_G 246
+#define FILL_B 250
+
+#define MAX_FRAME 6574
+
+#define REFRESH_RATE 33
+
 BOOL g_bHooking = FALSE;
 HHOOK g_hHook = nullptr;
 HWND g_prevHwnd = nullptr;
@@ -38,6 +46,11 @@ SDL_Renderer* sdlRenderer = nullptr;
 SDL_Surface* sdlSurface = nullptr;
 
 char lpszMsg[100] = { 0 };
+char oldCaption[100] = { 0 };
+DWORD lastTime;
+DWORD beginTime;
+DWORD pastTime;
+double fps;
 
 HWND SpyFindSmallestWindow(const POINT &pt)
 {
@@ -228,17 +241,23 @@ void ProcessingImage(stbi_uc* data, int width, int height, int comp, int pitch)
                 data[j * pitch + i * comp + 1] = LINE_G;
                 data[j * pitch + i * comp + 2] = LINE_R;
             }
-            else if ((i % (width / 5) == (((6574 - nSDLTime) / 30 * (width / 20))) % (width / 5)) && i != 0)//竖线
+            else if ((i % (width / 5) == (((MAX_FRAME - nSDLTime) / 30 * (width / 20))) % (width / 5)) && i != 0)//竖线
             {
                 data[j * pitch + i * comp] = LINE_B;
                 data[j * pitch + i * comp + 1] = LINE_G;
                 data[j * pitch + i * comp + 2] = LINE_R;
             }
-            else if (c < 128)
+            else if (c == 255)
             {
                 data[j * pitch + i * comp] = BG_B;
                 data[j * pitch + i * comp + 1] = BG_G;
                 data[j * pitch + i * comp + 2] = BG_R;
+            }
+            else if (c == 0)
+            {
+                data[j * pitch + i * comp] = FILL_B;
+                data[j * pitch + i * comp + 1] = FILL_G;
+                data[j * pitch + i * comp + 2] = FILL_R;
             }
         }
     }
@@ -291,15 +310,61 @@ VOID CALLBACK SDLProc(HWND, UINT, UINT_PTR, DWORD)
     SDL_FreeSurface(image);
     stbi_image_free(data);
 
-    if (nSDLTime > 6574)
+    if (nSDLTime > MAX_FRAME)
     {
+        auto font = TTF_OpenFont("C:\\windows\\fonts\\msyh.ttf", 32);
+        assert(font);
+        SDL_Color color = { 17, 152, 187 };
+
+        auto surface = TTF_RenderUNICODE_Blended(font, PUINT16(L"播放完毕，谢谢欣赏！"), color);
+        texture = SDL_CreateTextureFromSurface(sdlRenderer, surface);
+
+        SDL_Rect rt;
+        rt.x = 0;
+        rt.y = 0;
+        SDL_QueryTexture(texture, nullptr, nullptr, &rt.w, &rt.h);
+
+        SDL_RenderClear(sdlRenderer);
+        SDL_RenderCopy(sdlRenderer, texture, &rt, &rt);
+        SDL_RenderPresent(sdlRenderer);
+
+        SDL_DestroyTexture(texture);
+        SDL_FreeSurface(surface);
+        TTF_CloseFont(font);
+
+        SDL_Delay(2000);
+
         SDL_DestroyWindow(sdlWindow);
         SDL_DestroyRenderer(sdlRenderer);
         sdlWindow = nullptr;
         sdlRenderer = nullptr;
         SDL_Quit();
+
+        SetWindowTextA(g_hWnd, oldCaption);
+
         if (uSDL)
             KillTimer(g_hWnd, uSDL);
+        return;
+    }
+
+    {
+        auto time = timeGetTime();
+        auto sec = (time - beginTime) / 1000;
+        if (sec > pastTime)
+        {
+            int span = time - lastTime;
+            lastTime = time;
+            pastTime = sec;
+            fps = 1.0 * span / REFRESH_RATE;
+            sprintf_s(lpszMsg, "[BAD APPLE] Time: %02d:%02d, Frame: %04d, FPS: %02.2f - bajdcc", sec / 60,
+                sec % 60, nSDLTime, fps);
+            SetWindowTextA(g_hWnd, lpszMsg);
+            sprintf_s(lpszMsg, "[%02d:%02d] %04d %02.2f", sec / 60,
+                sec % 60, nSDLTime, fps);
+            StartIPC();
+            Print(lpszMsg);
+            StopIPC();
+        }
     }
 }
 
@@ -315,6 +380,16 @@ LRESULT CALLBACK PaintProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     SDL_PollEvent(&event);
 
     return CallWindowProc(oldProc, hWnd, msg, wParam, lParam);
+}
+
+void Prepare()
+{
+    nSDLTime = 0;
+    bUpdate = TRUE;
+    lastTime = timeGetTime();
+    beginTime = lastTime;
+    pastTime = 0;
+    fps = 0;
 }
 
 void InitSDL(HWND hWnd)
@@ -372,7 +447,7 @@ void InitSDL(HWND hWnd)
     assert(font);
     SDL_Color color = { 17, 152, 187 };
 
-    auto surface = TTF_RenderUNICODE_Blended(font, PUINT16(L"你好！准备开始！"), color);
+    auto surface = TTF_RenderUNICODE_Blended(font, PUINT16(L"准备播放动画！"), color);
     auto texture = SDL_CreateTextureFromSurface(sdlRenderer, surface);
 
     SDL_Rect rt;
@@ -388,9 +463,13 @@ void InitSDL(HWND hWnd)
     SDL_FreeSurface(surface);
     TTF_CloseFont(font);
 
-    nSDLTime = 0;
-    bUpdate = TRUE;
-    uSDL = SetTimer(g_hWnd, WM_USER + 402, 33, SDLProc);
+    SDL_Delay(2000);
+
+    Prepare();
+
+    GetWindowTextA(g_hWnd, oldCaption, sizeof(oldCaption));
+
+    uSDL = SetTimer(g_hWnd, WM_USER + 402, REFRESH_RATE, SDLProc);
 }
 
 VOID CALLBACK HookProc(HWND, UINT, UINT_PTR, DWORD)

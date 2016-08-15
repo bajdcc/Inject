@@ -21,7 +21,7 @@ HRESULT ReadingFromClient()
 
     while (g_bPipe)
     {
-        printf("[管道] 等待连接...\n");
+        //printf("[管道] 等待连接...\n");
 
         //等待客户端
         if (!ConnectNamedPipe(hPipe, nullptr))
@@ -30,7 +30,7 @@ HRESULT ReadingFromClient()
             return Panic("ConnectNamedPipe");
         }
 
-        printf("[管道] 管道连接成功!\n");
+        //printf("[管道] 管道连接成功!\n");
 
         //读取管道中的数据
         DWORD nReadNum;
@@ -44,7 +44,7 @@ HRESULT ReadingFromClient()
             printf("[管道] >> %s\n", szReadBuf);
         }
         HeapFree(hHeap, 0, szReadBuf);
-        printf("[管道] 关闭连接\n");
+        //printf("[管道] 关闭连接\n");
 
         FlushFileBuffers(hPipe);
         DisconnectNamedPipe(hPipe);
