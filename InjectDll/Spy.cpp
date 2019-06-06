@@ -27,9 +27,10 @@
 #define FILL_G 246
 #define FILL_B 250
 
-#define MAX_FRAME 6574
+#define FIRST_FRAME 200
+#define MAX_FRAME 5262
 
-#define REFRESH_RATE 33
+#define REFRESH_RATE (1000 / 24)
 
 BOOL g_bHooking = FALSE;
 HHOOK g_hHook = nullptr;
@@ -312,7 +313,7 @@ VOID CALLBACK SDLProc(HWND, UINT, UINT_PTR, DWORD)
 
     if (nSDLTime > MAX_FRAME)
     {
-        auto font = TTF_OpenFont("C:\\windows\\fonts\\msyh.ttf", 32);
+        auto font = TTF_OpenFont("msyh.ttf", 32);
         assert(font);
         SDL_Color color = { 17, 152, 187 };
 
@@ -384,7 +385,7 @@ LRESULT CALLBACK PaintProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void Prepare()
 {
-    nSDLTime = 0;
+    nSDLTime = FIRST_FRAME;
     bUpdate = TRUE;
     lastTime = timeGetTime();
     beginTime = lastTime;
@@ -443,7 +444,7 @@ void InitSDL(HWND hWnd)
     SDL_RenderClear(sdlRenderer);
     SDL_RenderPresent(sdlRenderer);
 
-    auto font = TTF_OpenFont("C:\\windows\\fonts\\msyh.ttf", 32);
+    auto font = TTF_OpenFont("msyh.ttf", 32);
     assert(font);
     SDL_Color color = { 17, 152, 187 };
 

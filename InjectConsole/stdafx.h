@@ -16,4 +16,8 @@
 // TODO:  在此处引用程序需要的其他头文件
 #include <windows.h>
 #include "../InjectDll/InjectDll.h"
+#ifdef _DEBUG
 #pragma comment(lib,"../Debug/InjectDll.lib")
+#else
+#pragma comment(lib,"../Release/InjectDll.lib")
+#endif
